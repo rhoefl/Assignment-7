@@ -1,0 +1,81 @@
+class ExtendedCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 32, 3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(32, 64, 3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64 * 8 * 8, 512),
+            nn.ReLU(),
+            nn.Linear(512, 10)
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+model_1b = ExtendedCNN().to(device)
+criterion_1b = nn.CrossEntropyLoss()
+optimizer_1b = torch.optim.Adam(model_1b.parameters(), lr=0.001)
+
+train_losses_1b = []
+test_accuracies_1b = []
+EPOCHS_1B = 40
+import time
+
+start_time_1b = time.time()
+
+for epoch in range(EPOCHS_1B):
+    model_1b.train()
+    loss_sum = 0
+
+    for x, y in trainloader:
+        x, y = x.to(device), y.to(device)
+        optimizer_1b.zero_grad()
+        out = model_1b(x)
+        loss = criterion_1b(out, y)
+        loss.backward()
+        optimizer_1b.step()
+        loss_sum += loss.item()
+
+    train_losses_1b.append(loss_sum / len(trainloader))
+
+    model_1b.eval()
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for x, y in testloader:
+            x, y = x.to(device), y.to(device)
+            out = model_1b(x)
+            _, pred = torch.max(out, 1)
+            total += y.size(0)
+            correct += (pred == y).sum().item()
+
+    acc = 100 * correct / total
+    test_accuracies_1b.append(acc)
+
+    print(f"Epoch [{epoch+1}/{EPOCHS_1B}] Loss: {train_losses_1b[-1]:.4f} | Accuracy: {acc:.2f}%")
+
+end_time_1b = time.time()
+print("Total training time:", end_time_1b - start_time_1b)
+plt.figure(figsize=(12,5))
+
+plt.subplot(1,2,1)
+plt.plot(train_losses_1b)
+plt.title("Training Loss 1(b)")
+
+plt.subplot(1,2,2)
+plt.plot(test_accuracies_1b)
+plt.title("Evaluation Accuracy 1(b)")
+
+plt.show()
