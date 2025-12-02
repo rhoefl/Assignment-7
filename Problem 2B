@@ -1,0 +1,58 @@
+import time, torch
+
+def train_resnet(model, optimizer, epochs, trainloader, testloader, device):
+    train_losses = []
+    test_accuracies = []
+    start = time.time()
+
+    for epoch in range(epochs):
+        model.train()
+        loss_sum = 0.0
+        for x, y in trainloader:
+            x, y = x.to(device), y.to(device)
+            optimizer.zero_grad()
+            out = model(x)
+            loss = criterion_2a(out, y)
+            loss.backward()
+            optimizer.step()
+            loss_sum += loss.item()
+
+        train_losses.append(loss_sum / len(trainloader))
+
+        model.eval()
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for x, y in testloader:
+                x, y = x.to(device), y.to(device)
+                out = model(x)
+                _, pred = torch.max(out, 1)
+                total += y.size(0)
+                correct += (pred == y).sum().item()
+
+        acc = 100 * correct / total
+        test_accuracies.append(acc)
+        print(f"Epoch [{epoch+1}/{epochs}] Loss: {train_losses[-1]:.4f} | Accuracy: {acc:.2f}%")
+
+    total_time = time.time() - start
+    print("Total training time:", total_time)
+    return train_losses, test_accuracies, total_time
+EPOCHS_2B = 40  
+
+model_2b_wd = ResNet10(num_classes=10).to(device)
+optimizer_2b_wd = optim.Adam(model_2b_wd.parameters(), lr=0.001, weight_decay=0.001)
+
+train_losses_2b_wd, test_accuracies_2b_wd, time_2b_wd = train_resnet(
+    model_2b_wd, optimizer_2b_wd, EPOCHS_2B, trainloader, testloader, device
+)
+plt.figure(figsize=(12,5))
+
+plt.subplot(1,2,1)
+plt.plot(train_losses_2b_wd)
+plt.title("Training Loss 2(b) Weight Decay")
+
+plt.subplot(1,2,2)
+plt.plot(test_accuracies_2b_wd)
+plt.title("Eval Accuracy 2(b) Weight Decay")
+
+plt.show()
